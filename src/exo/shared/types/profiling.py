@@ -27,12 +27,36 @@ class MemoryUsage(CamelCaseModel):
 
     @classmethod
     def from_psutil(cls, *, override_memory: int | None) -> Self:
+        import subprocess
+        import sys
+
         vm = psutil.virtual_memory()
         sm = psutil.swap_memory()
 
+        gpu_total = 0
+        gpu_available = 0
+        if sys.platform != "darwin":
+            try:
+                result = subprocess.run(
+                    [
+                        "nvidia-smi",
+                        "--query-gpu=memory.total,memory.free",
+                        "--format=csv,noheader,nounits",
+                    ],
+                    capture_output=True,
+                    text=True,
+                    timeout=5,
+                )
+                for line in result.stdout.strip().splitlines():
+                    parts = line.split(",")
+                    gpu_total += int(parts[0].strip()) * 1024 * 1024
+                    gpu_available += int(parts[1].strip()) * 1024 * 1024
+            except Exception:
+                pass
+
         return cls.from_bytes(
-            ram_total=vm.total,
-            ram_available=vm.available if override_memory is None else override_memory,
+            ram_total=vm.total + gpu_total,
+            ram_available=(vm.available if override_memory is None else override_memory) + gpu_available,
             swap_total=sm.total,
             swap_available=sm.free,
         )

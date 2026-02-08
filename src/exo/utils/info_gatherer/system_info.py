@@ -89,12 +89,21 @@ async def get_network_interfaces() -> list[NetworkInterfaceInfo]:
 
 
 async def get_model_and_chip() -> tuple[str, str]:
-    """Get Mac system information using system_profiler."""
+    """Get system hardware information (GPU model and chip)."""
     model = "Unknown Model"
     chip = "Unknown Chip"
 
-    # TODO: better non mac support
     if sys.platform != "darwin":
+        try:
+            process = await run_process(
+                ["nvidia-smi", "--query-gpu=name", "--format=csv,noheader"]
+            )
+            gpu_name = process.stdout.decode().strip()
+            if gpu_name:
+                model = f"Linux Box ({gpu_name})"
+                chip = gpu_name
+        except Exception:
+            pass
         return (model, chip)
 
     try:
