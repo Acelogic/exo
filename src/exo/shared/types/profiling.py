@@ -13,16 +13,27 @@ class MemoryUsage(CamelCaseModel):
     ram_available: Memory
     swap_total: Memory
     swap_available: Memory
+    gpu_vram_total: Memory = Memory.from_bytes(0)
+    gpu_vram_available: Memory = Memory.from_bytes(0)
 
     @classmethod
     def from_bytes(
-        cls, *, ram_total: int, ram_available: int, swap_total: int, swap_available: int
+        cls,
+        *,
+        ram_total: int,
+        ram_available: int,
+        swap_total: int,
+        swap_available: int,
+        gpu_vram_total: int = 0,
+        gpu_vram_available: int = 0,
     ) -> Self:
         return cls(
             ram_total=Memory.from_bytes(ram_total),
             ram_available=Memory.from_bytes(ram_available),
             swap_total=Memory.from_bytes(swap_total),
             swap_available=Memory.from_bytes(swap_available),
+            gpu_vram_total=Memory.from_bytes(gpu_vram_total),
+            gpu_vram_available=Memory.from_bytes(gpu_vram_available),
         )
 
     @classmethod
@@ -33,8 +44,8 @@ class MemoryUsage(CamelCaseModel):
         vm = psutil.virtual_memory()
         sm = psutil.swap_memory()
 
-        gpu_total = 0
-        gpu_available = 0
+        gpu_vram_total = 0
+        gpu_vram_available = 0
         if sys.platform != "darwin":
             try:
                 result = subprocess.run(
@@ -49,16 +60,18 @@ class MemoryUsage(CamelCaseModel):
                 )
                 for line in result.stdout.strip().splitlines():
                     parts = line.split(",")
-                    gpu_total += int(parts[0].strip()) * 1024 * 1024
-                    gpu_available += int(parts[1].strip()) * 1024 * 1024
+                    gpu_vram_total += int(parts[0].strip()) * 1024 * 1024
+                    gpu_vram_available += int(parts[1].strip()) * 1024 * 1024
             except Exception:
                 pass
 
         return cls.from_bytes(
-            ram_total=vm.total + gpu_total,
-            ram_available=(vm.available if override_memory is None else override_memory) + gpu_available,
+            ram_total=vm.total,
+            ram_available=vm.available if override_memory is None else override_memory,
             swap_total=sm.total,
             swap_available=sm.free,
+            gpu_vram_total=gpu_vram_total,
+            gpu_vram_available=gpu_vram_available,
         )
 
 

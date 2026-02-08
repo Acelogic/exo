@@ -513,6 +513,7 @@
       let ramUsed = 0;
       let gpuUsagePercent = 0;
       let sysPower: number | null = null;
+      const gpuVram = node.gpu_vram;
 
       if (macmon) {
         if (macmon.memory && macmon.memory.ram_total > 0) {
@@ -1043,6 +1044,27 @@
           .append("tspan")
           .attr("fill", "rgba(179,179,179,0.7)")
           .text(` (${ramUsagePercent.toFixed(0)}%)`);
+
+        // GPU VRAM info line below memory
+        if (gpuVram && gpuVram.vram_total > 0) {
+          const vramY = infoY + fontSize * 1.2;
+          const vramUsed = gpuVram.vram_total - gpuVram.vram_available;
+          const vramText = nodeG
+            .append("text")
+            .attr("x", nodeInfo.x)
+            .attr("y", vramY)
+            .attr("text-anchor", "middle")
+            .attr("font-size", fontSize * 0.85)
+            .attr("font-family", "SF Mono, Monaco, monospace");
+          vramText
+            .append("tspan")
+            .attr("fill", "rgba(0,255,136,0.9)")
+            .text(`VRAM ${formatBytes(vramUsed)}`);
+          vramText
+            .append("tspan")
+            .attr("fill", "rgba(179,179,179,0.9)")
+            .text(`/${formatBytes(gpuVram.vram_total)}`);
+        }
       } else if (showCompactLabels) {
         // COMPACT MODE: Just name and basic info (4+ nodes)
         const fontSize = Math.max(7, nodeRadius * 0.11);

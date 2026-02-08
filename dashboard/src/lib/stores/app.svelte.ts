@@ -47,6 +47,10 @@ export interface NodeInfo {
     gpu_usage?: [number, number];
     sys_power?: number;
   };
+  gpu_vram?: {
+    vram_total: number;
+    vram_available: number;
+  };
   last_macmon_update: number;
   friendly_name?: string;
 }
@@ -83,6 +87,8 @@ interface RawMemoryUsage {
   ramAvailable?: { inBytes: number };
   swapTotal?: { inBytes: number };
   swapAvailable?: { inBytes: number };
+  gpuVramTotal?: { inBytes: number };
+  gpuVramAvailable?: { inBytes: number };
 }
 
 interface RawSystemPerformanceProfile {
@@ -402,6 +408,9 @@ function transformTopology(
       }
     }
 
+    const gpuVramTotal = memory?.gpuVramTotal?.inBytes ?? 0;
+    const gpuVramAvailable = memory?.gpuVramAvailable?.inBytes ?? 0;
+
     nodes[nodeId] = {
       system_info: {
         model_id: identity?.modelId ?? "Unknown",
@@ -423,6 +432,10 @@ function transformTopology(
           system?.gpuUsage !== undefined ? [0, system.gpuUsage] : undefined,
         sys_power: system?.sysPower,
       },
+      gpu_vram:
+        gpuVramTotal > 0
+          ? { vram_total: gpuVramTotal, vram_available: gpuVramAvailable }
+          : undefined,
       last_macmon_update: Date.now() / 1000,
       friendly_name: identity?.friendlyName,
     };
